@@ -16,11 +16,36 @@ function App() {
     cpf: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Dados do formulário:', formData);
-    alert('Contato registrado com sucesso!');
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+	e.preventDefault();
+  
+	try {
+	  const response = await fetch('http://localhost:3001/api/contacts', {
+		method: 'POST',
+		headers: {
+		  'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(formData),
+	  });
+  
+	  if (!response.ok) {
+		throw new Error('Erro ao registrar contato.');
+	  }
+  
+	  const data = await response.json();
+	  console.log('Contato registrado:', data);
+	  alert('Contato registrado com sucesso!');
+	  setFormData({
+		fullName: '',
+		email: '',
+		phone: '',
+		cpf: '',
+	  });
+	} catch (error) {
+	  console.error(error);
+	  alert('Erro ao registrar o contato.');
+	}
+  };  
 
   const formatCPF = (value: string) => {
     return value
