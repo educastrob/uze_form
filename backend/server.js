@@ -27,11 +27,57 @@ pool.query('SELECT NOW()', (err, res) => {
     }
 });
 
+// Função para validar CPF
+function validarCPF(cpf) {
+    cpf = cpf.replace(/[^\d]+/g, '');
+    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+    let soma = 0, resto;
+    for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i-1, i)) * (11 - i);
+    resto = (soma * 10) % 11;
+    if ((resto === 10) || (resto === 11)) resto = 0;
+    if (resto !== parseInt(cpf.substring(9, 10))) return false;
+    soma = 0;
+    for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i-1, i)) * (12 - i);
+    resto = (soma * 10) % 11;
+    if ((resto === 10) || (resto === 11)) resto = 0;
+    if (resto !== parseInt(cpf.substring(10, 11))) return false;
+    return true;
+}
+
+// Função para validar email
+function validarEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+}
+
 // routes
 app.post('/api/contacts', async (req, res) => {
     const { fullName, email, phone, cpf } = req.body;
 
+    if (!validarCPF(cpf)) {
+        return res.status(400).json({ message: 'CPF inválido.' });
+    }
+
+    if (!validarEmail(email)) {
+        return res.status(400).json({ message: 'Email inválido.' });
+    }
+
     try {
+        const cpfExistente = await pool.query('SELECT * FROM contacts WHERE cpf = $1', [cpf]);
+        if (cpfExistente.rows.length > 0) {
+            return res.status(400).json({ message: 'CPF já cadastrado.' });
+        }
+
+        const telefoneExistente = await pool.query('SELECT * FROM contacts WHERE phone = $1', [phone]);
+        if (telefoneExistente.rows.length > 0) {
+            return res.status(400).json({ message: 'Telefone já cadastrado.' });
+        }
+
+        const emailExistente = await pool.query('SELECT * FROM contacts WHERE email = $1', [email]);
+        if (emailExistente.rows.length > 0) {
+            return res.status(400).json({ message: 'Email já cadastrado.' });
+        }
+
         const result = await pool.query(
             'INSERT INTO contacts (full_name, email, phone, cpf) VALUES ($1, $2, $3, $4) RETURNING *',
             [fullName, email, phone, cpf]
