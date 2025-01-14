@@ -2,6 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { Pool } = require('pg');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
@@ -50,8 +52,70 @@ function validarEmail(email) {
     return re.test(String(email).toLowerCase());
 }
 
-// routes
-app.post('/api/contacts', async (req, res) => {
+// Rota de registro
+app.post('/api/register', async (req, res) => {
+    const { name, email, password } = req.body;
+
+    if (!validarEmail(email)) {
+        return res.status(400).json({ message: 'Email inválido.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    try {
+        const emailExistente = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (emailExistente.rows.length > 0) {
+            return res.status(400).json({ message: 'Email já cadastrado.' });
+        }
+
+        const result = await pool.query(
+            'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *',
+            [name, email, hashedPassword]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao registrar usuário:', error);
+        res.status(500).json({ message: 'Erro ao registrar usuário.' });
+    }
+});
+
+// Rota de login
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (user.rows.length === 0) {
+            return res.status(400).json({ message: 'Email ou senha incorretos.' });
+        }
+
+        const validPassword = await bcrypt.compare(password, user.rows[0].password);
+        if (!validPassword) {
+            return res.status(400).json({ message: 'Email ou senha incorretos.' });
+        }
+
+        const token = jwt.sign({ id: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        res.status(200).json({ token });
+    } catch (error) {
+        console.error('Erro ao fazer login:', error);
+        res.status(500).json({ message: 'Erro ao fazer login.' });
+    }
+});
+
+// Middleware de autenticação
+function authenticateToken(req, res, next) {
+    const token = req.headers['authorization'];
+    if (!token) return res.sendStatus(401);
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+}
+
+// Rota de registro de contatos
+app.post('/api/contacts', authenticateToken, async (req, res) => {
     const { fullName, email, phone, cpf } = req.body;
 
     if (!validarCPF(cpf)) {
