@@ -1,16 +1,24 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+import "express-async-errors";
+import cors from "cors";
+import pg from "pg";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import express from "express";
+import bodyParser from "body-parser";
+import "dotenv/config";
 
 const app = express();
 const port = 3001;
 
-app.use(cors());
+app.use(express.json());
+app.use(cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json());
+const { Pool } = pg;
+
 
 // database config
 const pool = new Pool({
@@ -56,6 +64,8 @@ function validarEmail(email) {
 app.post('/api/register', async (req, res) => {
     const { name, email, password } = req.body;
 
+	console.log(name, email, password);
+
     if (!validarEmail(email)) {
         return res.status(400).json({ message: 'Email inválido.' });
     }
@@ -95,10 +105,10 @@ app.post('/api/login', async (req, res) => {
         }
 
         const token = jwt.sign({ id: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.status(200).json({ token });
+        return res.status(200).json({ token });
     } catch (error) {
         console.error('Erro ao fazer login:', error);
-        res.status(500).json({ message: 'Erro ao fazer login.' });
+        return res.status(500).json({ message: 'Erro ao fazer login.' });
     }
 });
 

@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ContactForm from './pages/ContactForm';
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -10,7 +12,21 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+	
   return (
+	<>
+	<ToastContainer
+		position="top-center"
+		autoClose={5000}
+		hideProgressBar={false}
+		newestOnTop={false}
+		closeOnClick={false}
+		rtl={false}
+		pauseOnFocusLoss
+		draggable
+		pauseOnHover
+		theme="light"
+	/>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -27,6 +43,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+	</>
   );
 }
 

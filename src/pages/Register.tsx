@@ -19,8 +19,12 @@ function Register() {
       alert('As senhas não coincidem!');
       return;
     }
-    register(formData.email, formData.password);
-    navigate('/');
+	const data = {
+		name: formData.name,
+		email: formData.email,
+		password: formData.password,
+	}
+    register(data);
   };
 
   return (
